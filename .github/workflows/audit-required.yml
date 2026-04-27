@@ -1,0 +1,41 @@
+name: Audit Required
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  require-audit-approval:
+    name: Require auditor sign-off
+    if: github.event.pull_request.draft == false
+    # Requires the `gh` CLI, preinstalled on ubuntu-latest GitHub-hosted runners.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for auditor sign-off (label OR tagged review)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Path A: an `audit-approved` label was applied (preferred — applied by the auditor agent or a code owner).
+          has_label=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/labels" \
+            --jq '[.[] | select(.name=="audit-approved")] | length')
+
+          # Path B: an approving review whose body contains [audit] (manual fallback).
+          has_review=$(gh api "repos/$GH_REPO/pulls/$PR_NUMBER/reviews" \
+            --jq '[.[] | select(.state=="APPROVED") | select(.body | test("\\[audit\\]"; "i"))] | length')
+
+          if [ "$has_label" -lt 1 ] && [ "$has_review" -lt 1 ]; then
+            echo "::error::Auditor sign-off missing. Either apply the 'audit-approved' label or submit an approving review whose body contains [audit]."
+            exit 1
+          fi
+
+          echo "Auditor sign-off present (label=$has_label, tagged-reviews=$has_review)."

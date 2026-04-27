@@ -1,0 +1,96 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  pull-requests: read
+  contents: read
+  issues: read
+
+jobs:
+  validate-pr:
+    name: Validate PR description and branch
+    # Requires the `gh` CLI, preinstalled on ubuntu-latest GitHub-hosted runners.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name convention
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "Branch: $HEAD_REF"
+          if ! [[ "$HEAD_REF" =~ ^(feat|fix|chore|docs|refactor|test|perf)/[a-z0-9._-]+$ ]]; then
+            echo "::error::Branch name must match <type>/<short-description> where type is one of feat|fix|chore|docs|refactor|test|perf"
+            exit 1
+          fi
+
+      - name: Check PR title is Conventional-Commit-ish
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "Title: $PR_TITLE"
+          if ! [[ "$PR_TITLE" =~ ^(feat|fix|chore|docs|refactor|test|perf)(\([^)]+\))?:\ .+ ]]; then
+            echo "::error::PR title must start with one of feat|fix|chore|docs|refactor|test|perf, optionally scoped, then ': '. Example: 'feat(auth): add password hashing'."
+            exit 1
+          fi
+
+      - name: Check PR body for Closes #N
+        id: closes
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if [[ -z "$PR_BODY" ]]; then
+            echo "::error::PR description is empty. It must follow .github/pull_request_template.md and include 'Closes #N'."
+            exit 1
+          fi
+          ref=$(echo "$PR_BODY" | grep -Eio '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' | head -n1 || true)
+          if [[ -z "$ref" ]]; then
+            echo "::error::PR description must include 'Closes #N' (or Fixes/Resolves) linking to a parent issue."
+            exit 1
+          fi
+          num=$(echo "$ref" | grep -oE '[0-9]+')
+          echo "issue=$num" >> "$GITHUB_OUTPUT"
+
+      - name: Verify referenced issue exists and is open
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ steps.closes.outputs.issue }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ISSUE:-}" ]]; then
+            echo "::error::Could not extract issue number from PR body."
+            exit 1
+          fi
+          # Issues and PRs share a number space — exclude PRs.
+          payload=$(gh api "repos/$GH_REPO/issues/$ISSUE" 2>/dev/null || true)
+          if [[ -z "$payload" ]]; then
+            echo "::error::Referenced issue #$ISSUE does not exist in $GH_REPO."
+            exit 1
+          fi
+          is_pr=$(echo "$payload" | jq -r 'has("pull_request")')
+          state=$(echo "$payload" | jq -r '.state')
+          if [[ "$is_pr" == "true" ]]; then
+            echo "::error::#$ISSUE is a pull request, not an issue. Reference the parent issue instead."
+            exit 1
+          fi
+          if [[ "$state" != "open" ]]; then
+            echo "::error::Referenced issue #$ISSUE is $state. PRs must reference an open issue."
+            exit 1
+          fi
+          echo "Referenced issue #$ISSUE is open."
+
+      - name: Check PR body has required template sections
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          missing=0
+          for section in "## Reference" "## Implementation Summary" "## Verification Performed"; do
+            if ! grep -Fq "$section" <<< "$PR_BODY"; then
+              echo "::error::PR description is missing required section: $section"
+              missing=1
+            fi
+          done
+          exit $missing

@@ -1,11 +1,7 @@
-# Pull Request: [Task Title]
+# PR Template
 
-## 🔗 Reference
-Closes # [Insert Issue Number]
+The canonical pull-request template is enforced by GitHub at:
 
-## 📝 Implementation Summary
-[Briefly describe what was changed and why.]
+[`.github/pull_request_template.md`](../.github/pull_request_template.md)
 
-## ✅ Verification Performed
-- [ ] Unit tests passed.
-- [ ] Requirement [X] from Spec is satisfied.
+Every PR opened against this repo is pre-populated with that template. Do not duplicate the template here — edit the canonical file under `.github/` so GitHub picks up the change.

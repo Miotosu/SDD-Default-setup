@@ -1,0 +1,62 @@
+name: Milestone from Spec
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'specs/features/**.md'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-milestone:
+    name: Create milestone for new feature spec
+    # Requires the `gh` CLI, which is preinstalled on GitHub-hosted ubuntu-latest runners.
+    # Self-hosted runners must install it: https://github.com/cli/cli#installation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect new spec files and create milestones
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Files added in this push under specs/features/, excluding the template.
+          mapfile -t ADDED < <(
+            git diff --name-only --diff-filter=A "${{ github.event.before }}" "${{ github.sha }}" \
+              | grep -E '^specs/features/.+\.md$' \
+              | grep -v '^specs/features/template\.md$' \
+              || true
+          )
+
+          if [ "${#ADDED[@]}" -eq 0 ]; then
+            echo "No new feature specs in this push."
+            exit 0
+          fi
+
+          for f in "${ADDED[@]}"; do
+            slug=$(basename "$f" .md)
+            # Title from first H1 in the spec, fallback to slug.
+            name=$(grep -m1 -E '^# Feature:' "$f" | sed -E 's/^# Feature:[[:space:]]*//' || true)
+            [ -z "$name" ] && name="$slug"
+            milestone="Feature: $name"
+
+            existing=$(gh api "repos/$GH_REPO/milestones?state=all" --jq ".[] | select(.title==\"$milestone\") | .number" || true)
+            if [ -n "$existing" ]; then
+              echo "Milestone already exists for $milestone (#$existing)."
+              continue
+            fi
+
+            echo "Creating milestone: $milestone"
+            gh api -X POST "repos/$GH_REPO/milestones" \
+              -f title="$milestone" \
+              -f description="Auto-created from $f" \
+              >/dev/null
+          done
