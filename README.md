@@ -32,8 +32,11 @@ Refiner  →  Decomposer  →  Implementer  →  Auditor
 - **`.github/workflows/`** — enforcement:
   - `pr-checks.yml` — branch naming, Conventional-Commit-style title, `Closes #N`, referenced issue exists and is open, required template sections.
   - `audit-required.yml` — blocks merge until an `audit-approved` label or `[audit]`-tagged approving review is present.
-  - `secret-scan.yml` — gitleaks on every PR.
+  - `secret-scan.yml` — gitleaks CLI scan on every PR and push to `main` (no GitHub-API helper, so it works under Dependabot's read-only token).
   - `milestone-from-spec.yml` — creates a milestone when a new spec lands on `main`.
+
+### Bot PRs are exempt from the SDD gates
+PRs authored by `dependabot[bot]` or `renovate[bot]` skip `pr-checks.yml` and `audit-required.yml` (they cannot satisfy `Closes #N`, branch-naming, or human-auditor sign-off rules). They remain gated on `secret-scan.yml` and any project-specific test suite. Dep bumps live outside the agentic SDD flow by design — they are upstream automation, not units of issue-driven work.
 - **`.claude/settings.json` + `.claude/hooks/`** — local guardrails (refuses direct pushes to `main`, blocks force pushes, allow-lists common `gh` and `git` operations).
 - **`docs/adr/`** — Architecture Decision Records: template plus process notes. Append-only.
 
