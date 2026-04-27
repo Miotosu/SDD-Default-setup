@@ -79,3 +79,6 @@ A PR is mergeable only when one of these holds:
 - An approving review has been submitted whose body contains `[audit]` (manual fallback).
 
 Both paths are checked by `.github/workflows/audit-required.yml`.
+
+### Bot exemption
+PRs authored by `dependabot[bot]` or `renovate[bot]` are **exempt** from the SDD/SNC gates and from human auditor sign-off. They still must pass the secret scan and any project-specific test suite. Dep bumps live outside the agentic SDD flow by design — they are upstream automation, not units of issue-driven work.

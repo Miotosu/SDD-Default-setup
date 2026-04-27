@@ -13,7 +13,12 @@ permissions:
 jobs:
   require-audit-approval:
     name: Require auditor sign-off
-    if: github.event.pull_request.draft == false
+    # Bot-authored PRs are exempt from human auditor sign-off; gate them
+    # on the secret scan and (project-specific) test suite instead.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     # Requires the `gh` CLI, preinstalled on ubuntu-latest GitHub-hosted runners.
     runs-on: ubuntu-latest
     steps:

@@ -14,6 +14,11 @@ jobs:
   validate-pr:
     name: Validate PR description and branch
     # Requires the `gh` CLI, preinstalled on ubuntu-latest GitHub-hosted runners.
+    # Bot-authored PRs (Dependabot, Renovate) cannot satisfy the SSoT/SNC rules
+    # and are exempted; their dep bumps live outside the SDD agentic flow.
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name convention
