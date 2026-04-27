@@ -48,6 +48,6 @@ Refiner  →  Decomposer  →  Implementer  →  Auditor
 - [ ] Branch protection on `main`: require PR, require status checks `Validate PR description and branch` and `Require auditor sign-off`, require review from Code Owners, require linear history.
 - [ ] Squash-and-merge as the only allowed merge type.
 - [ ] Auto-delete head branches on merge.
-- [ ] Replace `@your-org/auditors` and `@your-org/maintainers` placeholders in `.github/CODEOWNERS`.
+- [ ] Update `.github/CODEOWNERS` with the project's real auditor / maintainer handles (the scaffold defaults to `@Miotosu`; multi-person projects should swap in a team handle and split maintainers from auditors).
 - [ ] Labels: `task`, `audit`, `audit-approved`, `dependencies`, `github-actions`.
 - [ ] Project board with the six SDD columns.

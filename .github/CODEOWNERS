@@ -1,13 +1,14 @@
-# CODEOWNERS — auto-requests review from the auditor team on every PR.
-# Replace @your-org/auditors with the real GitHub team handle, or list usernames.
-# Combine with branch protection ("Require review from Code Owners") to enforce.
+# CODEOWNERS — auto-requests review from the auditor on every PR.
+# Solo-owner default. When this scaffold is forked into a multi-person project,
+# replace @Miotosu with the appropriate team handle (e.g. @your-org/auditors)
+# and split orchestration plumbing onto a separate maintainers team.
 
-*                       @your-org/auditors
+*                       @Miotosu
 
 # Tighter ownership for the orchestration plumbing — changing these
 # affects every project that consumes this scaffold.
-/.github/                @your-org/auditors @your-org/maintainers
-/.claude/                @your-org/auditors @your-org/maintainers
-/CLAUDE.md               @your-org/auditors @your-org/maintainers
-/agents/                 @your-org/auditors @your-org/maintainers
-/protocols/              @your-org/auditors @your-org/maintainers
+/.github/                @Miotosu
+/.claude/                @Miotosu
+/CLAUDE.md               @Miotosu
+/agents/                 @Miotosu
+/protocols/              @Miotosu
